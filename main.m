@@ -5,14 +5,20 @@ clc;clear;
 %10: 俯仰角-Theta 11:偏航角-fi 12: 倾斜角-gama
 %13：质量 m
 %速度倾斜角-gama_v
+global Beta Alpha Gama_v
+Beta=[];
+Alpha=[];
+Gama_v=[];
 in_0=[20;0.1*pi;0;0;0;0;0;20;0;0.1*pi;0;0;53.38];
-[t,out]=ode45(@missile,[0 30],in_0);
+[t,out]=ode45(@missile,[0:0.001:12],in_0);
 figure;
-plot3(out(:,7),out(:,9),out(:,8),'k',LineWidth=2);
-xlabel('x');ylabel("z");zlabel('y');
+%plot3(out(:,7),out(:,9),out(:,8),'k',LineWidth=2);
+plot(out(:,7),out(:,8),'k',LineWidth=2);
+xlabel('x');ylabel("y");
 grid on;
 %figure;
 %plot(t,out(:,1));
+
 function  dydt=missile(t,in)
 v=in(1);
 theta=in(2);
@@ -27,13 +33,18 @@ Theta=in(10);
 fi=in(11);
 gama=in(12);
 m=in(13);
+global Beta Alpha Gama_v
 beta=asin(cos(theta)*(cos(gama)*(sin(fi-fi_v)+sin(Theta)*sin(gama)*cos(fi-fi_v)))...
     -sin(theta)*cos(Theta)*sin(gama));
+Beta=[Beta;t,beta];
+
 alpha=asin((cos(theta)*(sin(Theta)*cos(gama)*cos(fi-fi_v)-...
     sin(gama)*sin(fi-fi_v))-sin(theta)*cos(Theta)*cos(gama))/cos(beta));
+Alpha=[Alpha;t,alpha];
 gama_v=asin((cos(alpha)*sin(beta)*sin(Theta)-...
     sin(alpha)*sin(beta)*cos(gama)*cos(Theta)+...
     cos(beta)*sin(gama)*cos(Theta))/cos(theta));
+Gama_v=[Gama_v;t,gama_v];
 g=9.81;
 density=1.225;S=0.0227;L=1.8;Ma=v/343.13;l=0.5;
 %系数插值
@@ -41,6 +52,7 @@ missile_areo=coe_interp_class(t,alpha,beta,Ma);
 P=missile_areo.Thrust;
 cx=missile_areo.Cx;
 cy=missile_areo.Cy;
+cz=missile_areo.Cz;
 Xg=missile_areo.Xg;
 mx_beta=missile_areo.Mx_beta;
 mx_wx=missile_areo.Mx_wx;
@@ -55,14 +67,14 @@ mc=missile_areo.Mc;
 
 X=cx*(0.5*density*v^2)*S;
 Y=cy*(0.5*density*v^2)*S;
-Z=-cy*(0.5*density*v^2)*S;
+Z=cz*(0.5*density*v^2)*S;
 
 deta_x=0;
 M_x1=mx_beta*beta*(0.5*density*v^2)*S*l...
     +mx_wx*omega_x1*l/(2*v)*(0.5*density*v^2)*S*l...
     +mx_detlax*deta_x*(0.5*density*v^2)*S*l;
 deta_y=0;
-M_y1=(mz_beta0+cy*(Xg-0.9381)/L)*(0.5*density*v^2)*S*L...
+M_y1=(mz_beta0-cz*(Xg-0.9381)/L)*(0.5*density*v^2)*S*L...
     +mz_omgeaz*omega_y1*L/v*(0.5*density*v^2)*S*L...
     +mz_detaz*deta_y*(0.5*density*v^2)*S*L;
 deta_z=0;
@@ -79,6 +91,9 @@ dfi_vdt=(P*(sin(alpha)*sin(gama_v)-cos(alpha)*sin(beta)*cos(gama_v))...
 domega_x1=(M_x1-(J_z1-J_y1)*omega_z1*omega_y1)/J_x1;
 domega_y1=(M_y1-(J_x1-J_z1)*omega_z1*omega_x1)/J_y1;
 domega_z1=(M_z1-(J_y1-J_x1)*omega_x1*omega_y1)/J_z1;
+if any(isnan(domega_z1))
+    1;
+end
 dx=v*cos(theta)*cos(fi_v);
 dy=v*sin(theta);
 dz=-v*cos(theta)*sin(fi_v);

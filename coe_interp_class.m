@@ -1,6 +1,6 @@
 classdef coe_interp_class
     properties(Access=public)
-        Cy;Cx;
+        Cy;Cx;Cz;
         Thrust;Xg;Mc;Mz_alpha0;Mz_detaz;Mz_omgeaz;
         Jz;Mx_wx;Mx_detlax;Mx_beta;Mz_beta0;
     end
@@ -8,6 +8,7 @@ classdef coe_interp_class
         function obj=coe_interp_class(t,alpha,beta,ma)
             obj.Cy=cy(alpha,ma);
             obj.Cx=cx(alpha,ma);
+            obj.Cz=-cy(beta,ma);
             obj.Thrust=thrust(t);
             obj.Xg=f_xg(t);
             obj.Mc=m_c(t);
@@ -17,14 +18,14 @@ classdef coe_interp_class
             obj.Jz=Jz(t);
             obj.Mx_wx=mx_wx(ma);
             obj.Mx_detlax=mx_detlax(ma);
-            obj.Mx_beta=mx_beta(alpha,ma);
+            obj.Mx_beta=mx_beta(abs(alpha),ma);
             obj.Mz_beta0=mz_alpha0(beta,ma);
         end    
     end
 
 end
 function z=cy(alpha,Ma)%升力系数插值
-[X,Y]=meshgrid(0:2:10,0.1:0.1:0.9);
+[X,Y]=meshgrid(pi/180*(0:2:10),0.1:0.1:0.9);
 Z=[.0000	.6430	1.4758	2.2870	3.0713	3.8463;
 .0000	.6454	1.4807	2.2942	3.0814	3.8598;
 .0000	.6480	1.4858	2.3014	3.0915	3.8731;
@@ -49,7 +50,7 @@ end
 end
 %% 
 function z=cx(alpha,Ma)%阻力系数插值
-[X,Y]=meshgrid(0:2:10,0.1:0.1:0.9);
+[X,Y]=meshgrid(pi/180*(0:2:10),0.1:0.1:0.9);
 Z=[.4177	.4404	.5219	.6603	.8534	1.1023;
 .3858	.4086	.4903	.6290	.8226	1.0723;
 .3779	.4007	.4827	.6218	.8160	1.0666;
@@ -73,7 +74,7 @@ function y=thrust(t)%推力系数插值
 T1=[.000	.15	.49	2.11];
 P1=9.81*[331.2	614.3	505.4	607.8];
 T2=[2.27	3.53	8.78	25.45	42.80	43.68  44.08];
-P2=9.81*[486.5	439.7	420.1	410.0	408.0	407.9  22.2];
+P2=9.81*[48.65	43.97	42.01	41.0	40.8	40.79  2.22];
 if t<=2.11
 y=interp1(T1,P1,t,"linear",0);
 elseif t<=2.27&&t>2.11
@@ -96,7 +97,7 @@ y=interp1(T,dM,t,"linear",0);
 end
 %% 静稳定力矩系数插值
 function z=mz_alpha0(alpha,Ma)
-[X,Y]=meshgrid(0:2:10,0.1:0.1:0.9);
+[X,Y]=meshgrid(pi/180*(0:2:10),0.1:0.1:0.9);
 Z=[0.0000  	-0.0104  	-0.0341  	-0.0564  	-0.0771  	-0.0985;
 0.0000  	-0.0104  	-0.0341  	-0.0564  	-0.0770  	-0.0983;
 0.0000  	-0.0104  	-0.0341  	-0.0564  	-0.0769  	-0.0982;
@@ -133,7 +134,7 @@ d=interp1(X,Y,ma,"linear");
 end
 %% 
 function d=mz_omgeaz(absalpha,ma,Xg)%阻尼力矩导数插值
-[X,Y]=meshgrid(0:2:10,0.1:0.1:0.9);
+[X,Y]=meshgrid(pi/180*(0:2:10),0.1:0.1:0.9);
 Z_1=[-0.4686  	-0.4829  	-0.4982  	-0.5130  	-0.5272  	-0.5409;
 -0.4707  	-0.4850  	-0.5003  	-0.5150  	-0.5292  	-0.5429;
 -0.4744  	-0.4886  	-0.5039  	-0.5186  	-0.5327  	-0.5464;
@@ -194,7 +195,7 @@ y=interp1(X,Y,ma,"linear");
 end
 %%横向静稳定力矩系数导数
 function y=mx_beta(alpha,Ma)
-[X,Y]=meshgrid(0:2:10,0.4:0.1:0.8);
+[X,Y]=meshgrid(pi/180*(0:2:10),0.4:0.1:0.8);
 if Ma<0.4
     Ma=0.4;
 end
