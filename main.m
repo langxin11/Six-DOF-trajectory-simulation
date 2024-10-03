@@ -9,8 +9,8 @@ global Beta Alpha Gama_v
 Beta=[];
 Alpha=[];
 Gama_v=[];
-in_0=[20;0.1*pi;0;0;0;0;0;20;0;0.1*pi;0;0;53.38];
-[t,out]=ode45(@missile,[0:0.001:12],in_0);
+in_0=[20;0.1*pi;0;0;0;0;0;20;0;0.1*pi;0;0;53.38;0];
+[t,out]=ode45(@missile,[0 12],in_0);
 figure;
 %plot3(out(:,7),out(:,9),out(:,8),'k',LineWidth=2);
 plot(out(:,7),out(:,8),'k',LineWidth=2);
@@ -33,6 +33,7 @@ Theta=in(10);
 fi=in(11);
 gama=in(12);
 m=in(13);
+dTheta_dt=in(14);
 global Beta Alpha Gama_v
 beta=asin(cos(theta)*(cos(gama)*(sin(fi-fi_v)+sin(Theta)*sin(gama)*cos(fi-fi_v)))...
     -sin(theta)*cos(Theta)*sin(gama));
@@ -64,24 +65,29 @@ mz_detaz=missile_areo.Mz_detaz;
 J_z1=missile_areo.Jz;
 mc=missile_areo.Mc;
 
-
 X=cx*(0.5*density*v^2)*S;
 Y=cy*(0.5*density*v^2)*S;
 Z=cz*(0.5*density*v^2)*S;
+mz_alpha=mz_alpha0+cy*(Xg-0.9381)/L;
+J_x1=0.83;J_y1=J_z1;
+%%动力系数
+dynamic_coe=dynamic_coe_class(mz_omgeaz,0.5*density*v^2,S,L,J_z1,v,mz_alpha,...
+mz_detaz,cy,P,0,theta,mx_detlax,mx_wx,m,J_x1);
+deta_x=0;deta_y=0;deta_z=0;
+[deta_x,deta_y,deta_z]=control(dynamic_coe,t,Theta,dTheta_dt);
 
-deta_x=0;
 M_x1=mx_beta*beta*(0.5*density*v^2)*S*l...
     +mx_wx*omega_x1*l/(2*v)*(0.5*density*v^2)*S*l...
     +mx_detlax*deta_x*(0.5*density*v^2)*S*l;
-deta_y=0;
+
 M_y1=(mz_beta0-cz*(Xg-0.9381)/L)*(0.5*density*v^2)*S*L...
     +mz_omgeaz*omega_y1*L/v*(0.5*density*v^2)*S*L...
     +mz_detaz*deta_y*(0.5*density*v^2)*S*L;
-deta_z=0;
+
 M_z1=(mz_alpha0+cy*(Xg-0.9381)/L)*(0.5*density*v^2)*S*L...
     +mz_omgeaz*omega_z1*L/v*(0.5*density*v^2)*S*L...
     +mz_detaz*deta_z*(0.5*density*v^2)*S*L;
-J_x1=0.83;J_y1=J_z1;
+
 %%%%%%%%%微分方程
 dvdt=(P*cos(alpha)*cos(beta)-X-m*g*sin(theta))/m;
 dthetadt=(P*(sin(alpha)*cos(gama_v)+cos(alpha)*sin(beta)*sin(gama_v))...
@@ -91,9 +97,7 @@ dfi_vdt=(P*(sin(alpha)*sin(gama_v)-cos(alpha)*sin(beta)*cos(gama_v))...
 domega_x1=(M_x1-(J_z1-J_y1)*omega_z1*omega_y1)/J_x1;
 domega_y1=(M_y1-(J_x1-J_z1)*omega_z1*omega_x1)/J_y1;
 domega_z1=(M_z1-(J_y1-J_x1)*omega_x1*omega_y1)/J_z1;
-if any(isnan(domega_z1))
-    1;
-end
+
 dx=v*cos(theta)*cos(fi_v);
 dy=v*sin(theta);
 dz=-v*cos(theta)*sin(fi_v);
@@ -101,10 +105,10 @@ dTheta=omega_y1*sin(gama)+omega_z1*cos(gama);
 dfi=(omega_y1*cos(gama)-omega_z1*sin(gama))/cos(Theta);
 dgama=omega_x1-tan(Theta)*(omega_y1*cos(gama)-omega_z1*sin(gama));
 dm=-mc;
-
+dTheta2_dt2=-dTheta_dt+dthetadt;
 dydt=[dvdt;dthetadt;dfi_vdt;domega_x1;domega_y1;domega_z1;dx;dy;dz;...
-    dTheta;dfi;dgama;dm];
-if any(isnan(dydt))
-    1;
-end
+    dTheta;dfi;dgama;dm;dTheta2_dt2];
+% if any(isnan(dydt))
+%     error('Array contains NaN, stopping execution.');
+% end
 end

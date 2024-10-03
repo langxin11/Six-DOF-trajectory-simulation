@@ -8,6 +8,7 @@ classdef coe_interp_class
         function obj=coe_interp_class(t,alpha,beta,ma)
             obj.Cy=cy(alpha,ma);
             obj.Cx=cx(alpha,ma);
+            
             obj.Cz=-cy(beta,ma);
             obj.Thrust=thrust(t);
             obj.Xg=f_xg(t);
@@ -20,7 +21,8 @@ classdef coe_interp_class
             obj.Mx_detlax=mx_detlax(ma);
             obj.Mx_beta=mx_beta(abs(alpha),ma);
             obj.Mz_beta0=mz_alpha0(beta,ma);
-        end    
+        end   
+        
     end
 
 end
@@ -68,6 +70,9 @@ if Ma>0.9
     Ma=0.9;
 end
 z=interp2(X,Y,Z,abs(alpha),Ma,"linear");
+% if any(isnan(z))
+%     error('Array contains NaN, stopping execution.');
+% end
 end
 %% 
 function y=thrust(t)%推力系数插值
