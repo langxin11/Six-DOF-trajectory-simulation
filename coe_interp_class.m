@@ -1,26 +1,27 @@
 classdef coe_interp_class
     properties(Access=public)
         Cy;Cx;Cz;
-        Thrust;Xg;Mc;Mz_alpha0;Mz_detaz;Mz_omgeaz;
-        Jz;Mx_wx;Mx_detlax;Mx_beta;Mz_beta0;
+        Thrust;Xg;Mc;Mz_alpha0;Mz_deltaz;Mz_omegaz;
+        Jz;Mx_wx;Mx_deltax;Mx_beta;My_beta0;My_omegay;Cx_beta
     end
     methods
         function obj=coe_interp_class(t,alpha,beta,ma)
             obj.Cy=cy(alpha,ma);
-            obj.Cx=cx(alpha,ma);
-            
+            obj.Cx=cx(alpha^2+beta^2,ma);
             obj.Cz=-cy(beta,ma);
             obj.Thrust=thrust(t);
             obj.Xg=f_xg(t);
             obj.Mc=m_c(t);
             obj.Mz_alpha0=mz_alpha0(alpha,ma);
-            obj.Mz_detaz=mz_detaz(ma);
-            obj.Mz_omgeaz=mz_omgeaz(abs(alpha),ma,obj.Xg);
+            obj.Mz_deltaz=mz_deltaz(ma);
+            obj.Mz_omegaz=mz_omegaz(abs(alpha),ma,obj.Xg);
             obj.Jz=Jz(t);
             obj.Mx_wx=mx_wx(ma);
-            obj.Mx_detlax=mx_detlax(ma);
+            obj.Mx_deltax=mx_deltax(ma);
             obj.Mx_beta=mx_beta(abs(alpha),ma);
-            obj.Mz_beta0=mz_alpha0(beta,ma);
+            obj.My_beta0=mz_alpha0(beta,ma);
+            obj.My_omegay=mz_omegaz(abs(beta),ma,obj.Xg);
+            obj.Cx_beta=(cx(alpha^2+beta^2,ma)-cx(0,ma))/(alpha^2+beta^2);
         end   
         
     end
@@ -38,12 +39,10 @@ Z=[.0000	.6430	1.4758	2.2870	3.0713	3.8463;
 .0000	.6792	1.5501	2.3950	3.2162	4.0323;
 .0000	.6933	1.5935	2.4706	3.3273	4.1790;
 ];
-if Ma<0.1
-    Ma=0.1;
-end
-if Ma>0.9
-    Ma=0.9;
-end
+Ma=real(Ma);
+alpha=real(alpha);
+Ma=max(min(Ma,0.9),0.1);
+alpha=max(min(alpha,10*pi/180),-10*pi/180);
 if alpha>=0
     z=interp2(X,Y,Z,alpha,Ma,"linear");
 else
@@ -52,7 +51,7 @@ end
 end
 %% 
 function z=cx(alpha,Ma)%阻力系数插值
-[X,Y]=meshgrid(pi/180*(0:2:10),0.1:0.1:0.9);
+[X,Y]=meshgrid(pi/180*(0:2:10).^2,0.1:0.1:0.9);
 Z=[.4177	.4404	.5219	.6603	.8534	1.1023;
 .3858	.4086	.4903	.6290	.8226	1.0723;
 .3779	.4007	.4827	.6218	.8160	1.0666;
@@ -63,12 +62,10 @@ Z=[.4177	.4404	.5219	.6603	.8534	1.1023;
 .4082	.4321	.5175	.6621	.8641	1.1254;
 .4947	.5192	.6073	.7571	.9672	1.2392;
 ];
-if Ma<0.1
-    Ma=0.1;
-end
-if Ma>0.9
-    Ma=0.9;
-end
+Ma=real(Ma);
+alpha=real(alpha);
+alpha=max(min(alpha,10*pi/180),-10*pi/180);
+Ma=max(min(Ma,0.9),0.1);
 z=interp2(X,Y,Z,abs(alpha),Ma,"linear");
 % if any(isnan(z))
 %     error('Array contains NaN, stopping execution.');
@@ -113,12 +110,8 @@ Z=[0.0000  	-0.0104  	-0.0341  	-0.0564  	-0.0771  	-0.0985;
 0.0000  	-0.0065  	-0.0252  	-0.0425  	-0.0578  	-0.0739;
 0.0000  	-0.0053  	-0.0229  	-0.0391  	-0.0538  	-0.0693;
 ];
-if Ma<0.1
-    Ma=0.1;
-end
-if Ma>0.9
-    Ma=0.9;
-end
+alpha=max(min(alpha,10*pi/180),-10*pi/180);
+Ma=max(min(Ma,0.9),0.1);
 if alpha>=0
     z=interp2(X,Y,Z,alpha,Ma,"linear");
 else
@@ -126,19 +119,14 @@ else
 end
 end
 %% 操纵力矩系数导数插值
-function d=mz_detaz(ma)
+function d=mz_deltaz(ma)
 X=[0.3 0.4 0.5 0.6 0.8];
 Y=[-2.929	-3.022	-3.095	-3.2	-3.424];
-if ma<0.3
-    ma=0.3;
-end
-if ma>0.8
-    ma=0.8;
-end
+ma=max(min(ma,0.8),0.3);
 d=interp1(X,Y,ma,"linear");
 end
 %% 
-function d=mz_omgeaz(absalpha,ma,Xg)%阻尼力矩导数插值
+function d=mz_omegaz(absalpha,ma,Xg)%阻尼力矩导数插值
 [X,Y]=meshgrid(pi/180*(0:2:10),0.1:0.1:0.9);
 Z_1=[-0.4686  	-0.4829  	-0.4982  	-0.5130  	-0.5272  	-0.5409;
 -0.4707  	-0.4850  	-0.5003  	-0.5150  	-0.5292  	-0.5429;
@@ -160,12 +148,9 @@ Z_2=[-0.6179  	-0.6384  	-0.6600  	-0.6805  	-0.6999  	-0.7182;
 -0.7435  	-0.7624  	-0.7824  	-0.8014  	-0.8194  	-0.8365;
 -0.8069  	-0.8266  	-0.8474  	-0.8672  	-0.8859  	-0.9035;
 ];
-if ma<0.1
-    ma=0.1;
-end
-if ma>0.9
-    ma=0.9;
-end
+
+ma=max(min(ma,0.9),0.1);
+absalpha=max(min(absalpha,10/180*pi),0);
 d=(interp2(X,Y,Z_1,absalpha,ma,"linear")*(Xg-0.8896)+interp2(X,Y,Z_2,absalpha,ma,"linear")*(0.9381-Xg))/(0.938-0.8896);
 end
 %% 
@@ -178,39 +163,27 @@ end
 function y=mx_wx(ma)
 X=0.4:0.1:0.8;
 Y=[-4.9881 -5.1414 -5.3397 -5.6206 -6.1041];
-if ma<0.4
-    ma=0.4;
-end
-if ma>0.8
-    ma=0.8;
-end
+
+ma=max(min(ma,0.8),0.4);
 y=interp1(X,Y,ma,"linear");
 end
 %%滚转操纵力矩系数导数
-function y=mx_detlax(ma)
+function y=mx_deltax(ma)
 X=0.1:0.1:0.8;
 Y=[-1.1708 -1.1786 -1.1918 -1.2110 -1.2428 -1.2848 -1.3436 -1.4273];
-if ma<0.1
-    ma=0.1;
-end
-if ma>0.8
-    ma=0.8;
-end
+
+ma=max(min(ma,0.8),0.1);
 y=interp1(X,Y,ma,"linear");
 end
 %%横向静稳定力矩系数导数
-function y=mx_beta(alpha,Ma)
+function y=mx_beta(absalpha,Ma)
 [X,Y]=meshgrid(pi/180*(0:2:10),0.4:0.1:0.8);
-if Ma<0.4
-    Ma=0.4;
-end
-if Ma>0.8
-    Ma=0.8;
-end
+absalpha=max(min(absalpha,10*pi/180),0);
+Ma=max(min(Ma,0.8),0.4);
 Z=[0 -0.0452 -0.0904 -0.1356 -0.1808 -0.2260;
     0 -0.0479 -0.0958 -0.1437 -0.1916 -0.2395;
     0 -0.0516 -0.1033 -0.1549 -0.2066 -0.2582;
     0 -0.0566 -0.1133 -0.1699 -0.1929 -0.2266;
     0 -0.0643 -0.1286 -0.1929 -0.2572 -0.3214];
-y=interp2(X,Y,Z,alpha,Ma,'linear');
+y=interp2(X,Y,Z,absalpha,Ma,'linear');
 end
