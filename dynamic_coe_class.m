@@ -40,7 +40,7 @@ classdef dynamic_coe_class
             obj.b36=-g*cos(Theta)/v;
             obj.b38=-1/m/v;
         end
-        function [B,P,E]=Tran(obj,alpha,Theta)
+        function [B,P,D,E]=Tran(obj,alpha,Theta)
             B(1)=-obj.b25;
             B(2)=-obj.b25*(obj.b34-obj.a33-obj.b11);
             B(3)=-obj.b25*(-obj.b11*(obj.b34-obj.a33)-alpha*obj.b14);
@@ -55,6 +55,10 @@ classdef dynamic_coe_class
             E(2)=obj.b25*tan(Theta);
             E(3)=obj.b25*(-tan(Theta)*(obj.b34-obj.a33)+tan(Theta)*obj.b11);
             E(4)=obj.b25*((obj.b34)*tan(Theta)*obj.b11-obj.b32*obj.b14);
+            D(1)=0;
+            D(2)=-obj.b25*(-alpha*tan(Theta)-obj.b32);
+            D(3)=-obj.b25*(obj.b36*tan(Theta)-obj.b11*(-alpha*tan(Theta)-obj.b32));
+            D(4)=obj.b25*obj.b36*tan(Theta)*obj.b11;
         end   
     end
 end

@@ -9,11 +9,9 @@ function [delta_x,delta_y,delta_z]=control(dynamic_coe,t,global_dydt,in,ayc,azc,
     b11=dynamic_coe.b11;
     delta_z=fun(K_M,T_M,xi_M,T_1,t,in,global_dydt,ayc,ay,dynamic_coe);
     delta_x=fun_x(b11,b17,in(12),global_dydt(12));
-    delta_y=fun_y(azc,global_dydt(3),az);
-    delta_y=0;
+    delta_y=fun_y(azc,az,in,global_dydt,dynamic_coe);
     delta_z=max(min(delta_z,10/180*pi),-10/180*pi);
     delta_y=max(min(delta_y,10/180*pi),-10/180*pi);
-   
     delta_x=max(min(delta_x,10/180*pi),-10/180*pi);
 end
 %%%倾斜自动驾驶仪
@@ -44,29 +42,42 @@ function delta_z=fun(K_M,T_M,xi_M,T_1,t,in,dydt,ayc,ay,dynamic_coe)
         delta_z=-0.042*(ast_Theta(t)-0.5184*dTheta-1*Theta);
     end
     if (t>=8.015)&&(start_y==false)
-        v=in(1);H=in(8);dH=dydt(8);
+        H=in(8);dH=dydt(8);
         Theta=in(10);dTheta=dydt(10);
         exp_Theta=0.1347*(304-H)+0.068984*(0-dH);%高度自动驾驶仪得到预期俯仰角
         delta_z=-0.042*(exp_Theta-0.5184*dTheta-1*Theta);
         
     elseif start_y==true
         %设定过载自动驾驶仪
-        k_s=K;
-%         k1=0.0000125;
-%         k2=-0.0000001;
+        v=in(1);w_n=5*pi;xi=0.7;
+        a25=dynamic_coe.a25;a22=dynamic_coe.a22;
+        a34=dynamic_coe.a34;a24=dynamic_coe.a24;
+        k_s=w_n^2/(v*a25*a34);
+        k_g=(2*xi*w_n-(a34-a22))/(a25*k_s);
+        k_a=((w_n^2+a22*a34+a24)/(k_s*a25*a34)-k_g)/v;
         dTheta=dydt(10);
-        delta_z=(k1*(ayc-ay)-k2*dTheta)*1;
+        delta_z=k_s*(ayc-k_a*ay-k_g*dTheta);    
+        
     end
 end
-function delta_y=fun_y(azc,dfi_v,az)
+function delta_y=fun_y(azc,az,in,dydt,dynamic_coe)
 %偏航过载驾驶仪
 global start_y
-k1=-0.000007;
-k2=-0.00001;
-k3=-0.000007;
-delta_y=-1*(k1*azc-k2*dfi_v-k3*az);
+dfi_v=dydt(3);
+delta_y=0;
+%delta_y=0.0638*16.05*(azc-(-0.0638/16.05)*dfi_v-(-0.0638/16.05)*az)/100;
 if start_y==true
-    delta_y=-1*(k1*azc-k2*dfi_v-k3*az);
+
+     
+%      k_1=-0.0638*16.05;
+%      k_2=-0.0638/16.05;
+%      k_3=-0.0638/16.05;
+    k1=0.000031;   %0.000029  20m  0.000031  70m
+    k2=-0.01;
+    delta_y=k1*(azc-az)-k2*dfi_v;
+
+     %delta_y=-k_1*(azc-k_2*dfi_v-k_3*az)/100;
+     
 end
 end
 function out=ast_Theta(t)

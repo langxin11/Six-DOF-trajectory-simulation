@@ -4,18 +4,22 @@ clc;clear;
 %7:x 8 :y 9:z
 %10: 俯仰角-Theta 11:偏航角-fi 12: 倾斜角-gama
 %13：质量 m 速度倾斜角-gama_v
-global Beta Alpha Gama_v global_delta global_dydt start_y
-Beta=[0,0];Alpha=[0,0];Gama_v=[0,0];
+global Beta Alpha  global_delta global_dydt start_y rr
+Beta=[0,0];Alpha=[0,0];
 global_delta=[0,0,0];global_dydt=zeros(1,16);
 start_y=false;
-in_0=[20;0.1*pi;0;0;0;0;0;20;0;0.1*pi;0;0;53.38;6000;20;0];
-[t,out]=ode45(@missile,[0 15],in_0);
+rr=[];
+
+in_0=[20;0.1*pi;0*pi/180;0;0;0;0;20;0;0.1*pi;0*pi/180;0;53.38;5000;20;20];
+[t,out,TE, YE, IE]=ode45(@missile,[0 25],in_0,odeset('Events', @myEventFunction));
 figure;
+min_r=min(rr);
 plot3(out(:,7),out(:,9),out(:,8),'k',LineWidth=2);
 xlabel('x');ylabel("y");
 grid on;
 hold on;
-plot3(out(:,14),out(:,16),out(:,15),'b',LineWidth=2);
+plot3(out(end,14),out(end,16),out(end,15),'.b',LineWidth=20000);
+% plot3(out(:,14),out(:,16),out(:,15),'b',LineWidth=200);
 % plot(out(:,7),out(:,8),'k',LineWidth=2);
 % xlabel('x');ylabel("y");
 % grid on;
@@ -41,7 +45,7 @@ xt=in(14);
 yt=in(15);
 zt=in(16);
 
-global Beta Alpha Gama_v global_delta global_dydt start_y
+global Beta Alpha  global_delta global_dydt start_y
 beta=asin(cos(theta)*(cos(gama)*(sin(fi-fi_v)+sin(Theta)*sin(gama)*cos(fi-fi_v)))...
     -sin(theta)*cos(Theta)*sin(gama));
 beta=real(beta);
@@ -55,21 +59,19 @@ gama_v=asin((cos(alpha)*sin(beta)*sin(Theta)-...
     sin(alpha)*sin(beta)*cos(gama)*cos(Theta)+...
     cos(beta)*sin(gama)*cos(Theta))/cos(theta));
 gama_v=real(gama_v);
-Gama_v=[Gama_v;t,gama_v*180/pi];
+%Gama_v=[Gama_v;t,gama_v*180/pi];
 g=9.81;
 density=1.225;S=0.0227;L=1.8;Ma=v/343.13;l=0.5;
 
 %弹目相对运动
-Vt=1; theta_t=135*pi/180;  fi_vt=0;
+Vt=0; theta_t=135*pi/180;  fi_vt=0;
 %目标的质点弹道
 dxt=Vt*cos(theta_t)*cos(fi_vt);
 dyt=Vt*sin(theta_t);
 dzt=-Vt*cos(theta_t)*sin(fi_vt);
 Xs=[xt-x,yt-y,zt-z];Xs1=[xt-x,0,zt-z];
 r=norm(Xs);
-if r<2000||start_y
-    start_y=true;
-end
+
 if xt>x
     if yt>y
         qy=acos((Xs*Xs1')/norm(Xs)/norm(Xs1));
@@ -136,14 +138,17 @@ Z=cz*(0.5*density*v^2)*S;
 mz_alpha=mz_alpha0+cy*(Xg-0.9381)/L;
 J_x1=0.83;J_y1=J_z1;
 %%动力系数
-
+if r<2000||start_y
+    start_y=true;
+end
+if t>17.45
+    t=t;
+end
 dynamic_coe=dynamic_coe_class(mz_omegaz,0.5*density*v^2,S,L,l,J_z1,J_y1,v,mz_alpha,...
                 mz_deltaz,cy/alpha,P,theta,mx_deltax,mx_wx,m,J_x1,mx_beta,...
                 my_beta0-cz*(Xg-0.9381)/L,mz_deltaz,my_omegay,Theta,cx_beta);
-[B4,P4,E4]=dynamic_coe.Tran(alpha,Theta);
-% if t>8.015
-%       t=t;
-% end
+[B4,P4,D4,E4]=dynamic_coe.Tran(alpha,Theta);
+
 [delta_x,delta_y,delta_z]=control(dynamic_coe,t,global_dydt,in,ayc,azc,ay,az);
 
 global_delta=[global_delta;delta_x,delta_y,delta_z];
